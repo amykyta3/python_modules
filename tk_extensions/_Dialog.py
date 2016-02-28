@@ -27,10 +27,13 @@ import tkinter as tk
 from tkinter import ttk
 
 ####################################################################################################
-# Generic dialog parent class
 class Dialog(tk.Toplevel):
+    """
+    Generic dialog parent class
+    """
 
     def __init__(self, parent = None, title = None):
+        
         if(parent):
             # Has a defined parent.
             self.parent = parent
@@ -78,9 +81,6 @@ class Dialog(tk.Toplevel):
             self.geometry("+%d+%d" % (self.parent.winfo_rootx()+50,
                                       self.parent.winfo_rooty()+50))
         
-        # Do Cancel if closed
-        self.protocol("WM_DELETE_WINDOW", self.dlg_pbCancel)
-        
         # User initialize routines
         self.dlg_initialize()
         
@@ -91,29 +91,34 @@ class Dialog(tk.Toplevel):
     # Construction Hooks
     #---------------------------------------------------------------
     def create_body(self, master_fr):
-        # create dialog body.  return widget that should have
-        # initial focus.  this method should be overridden
+        """
+        Create dialog body.
+        Return widget that should have initial focus.
+        This method should be overridden.
+        """
         pass
     
     def create_buttonbox(self, master_fr):
-        # add standard button box. override if you don't want the
-        # standard buttons
+        """
+        Add standard button box.
+        Override if you don't want the default buttons
+        """
         
-        w = ttk.Button(
+        ttk.Button(
             master_fr,
             text="Cancel",
             command=self.dlg_pbCancel
-        )
-        w.pack(side=tk.RIGHT)
+        ).pack(side=tk.RIGHT)
         
-        w = ttk.Button(
+        ttk.Button(
             master_fr,
             text="OK",
             command=self.dlg_pbOK,
             default=tk.ACTIVE
-        )
-        w.pack(side=tk.RIGHT)
+        ).pack(side=tk.RIGHT)
         
+        # Do Cancel if closed
+        self.protocol("WM_DELETE_WINDOW", self.dlg_pbCancel)
         
     #---------------------------------------------------------------
     # Standard button actions
@@ -159,7 +164,59 @@ class Dialog(tk.Toplevel):
         pass # override
         
     def dlg_validate(self):
-        return True # override
+        return(True) # override
     
     def dlg_apply(self):
         pass # override
+
+
+####################################################################################################
+# Example
+####################################################################################################
+if __name__ == '__main__':
+    from tkinter import messagebox
+    
+    class ExampleDialog(Dialog):
+        def __init__(self, my_text):
+            self.my_text = my_text
+            
+            Dialog.__init__(self, parent = None, title = "Example")
+        
+        def create_body(self, master_fr):
+            self.txt_textbox = ttk.Entry(
+                master_fr
+            )
+            self.txt_textbox.pack()
+            
+        def dlg_initialize(self):
+            
+            self.txt_textbox.delete(0, tk.END)
+            self.txt_textbox.insert(tk.END, self.my_text)
+            
+        def dlg_validate(self):
+            if(len(self.txt_textbox.get()) == 0):
+                messagebox.showerror(
+                    title = "Error!",
+                    message = "Text box cannot be empty."
+                )
+                return(False)
+            
+            return(True)
+            
+        def dlg_apply(self):
+            self.my_text = self.txt_textbox.get()
+    
+    
+    
+    
+    dlg = ExampleDialog("test text")
+    
+    if(dlg.result):
+        print(dlg.my_text)
+        
+    else:
+        print("Cancelled")
+        
+    import pprint
+    pprint.pprint(vars(dlg))
+    
