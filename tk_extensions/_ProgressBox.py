@@ -29,8 +29,10 @@ from tkinter import ttk
 import threading
 
 ####################################################################################################
-# Progress bar dialog box
 class ProgressBox(tk.Toplevel):
+    """
+    Progress bar dialog box
+    """
     def __init__(self, job_func, job_data = {}, parent = None, title = None):
         if(parent):
             # Has a defined parent.
@@ -82,11 +84,11 @@ class ProgressBox(tk.Toplevel):
         
         self.dlg_if = self.dialog_interface()
         
-        self.worker = self.worker_thread(self.dlg_if, job_func, job_data)
-        self.worker.start()
+        worker = self.worker_thread(self.dlg_if, job_func, job_data)
+        worker.start()
         
         # Loop here until the thread finishes
-        while(self.worker.is_alive()):
+        while(worker.is_alive()):
             
             # Process any updates from the worker
             x = self.dlg_if.get_progress()
@@ -117,9 +119,12 @@ class ProgressBox(tk.Toplevel):
         if(self.foster_parent):
             self.foster_parent.destroy()
         
-        if(self.worker.exc_info):
+        if(worker.exc_info):
             # By the way, worker caught an exception. Raise it here
-            raise self.worker.exc_info
+            raise worker.exc_info
+            
+        # Copy job_retval
+        self.job_retval = worker.job_retval
         
     #---------------------------------------------------------------
     # Construction Hooks
@@ -153,12 +158,11 @@ class ProgressBox(tk.Toplevel):
     
     def create_buttonbox(self, master_fr):
         
-        w = ttk.Button(
+        ttk.Button(
             master_fr,
             text="Cancel",
             command=self.dlg_pbCancel
-        )
-        w.pack(side=tk.RIGHT)
+        ).pack(side=tk.RIGHT)
         
     #---------------------------------------------------------------
     # Events
@@ -183,6 +187,7 @@ class ProgressBox(tk.Toplevel):
             self.job_data = job_data
             
             self.exc_info = None
+            self.job_retval = None
         
         def run(self):
             try:
@@ -191,7 +196,7 @@ class ProgressBox(tk.Toplevel):
                 self.exc_info = E
             
         def run_body(self):
-            self.job_func(self.dlg_if, **self.job_data)
+            self.job_retval = self.job_func(self.dlg_if, **self.job_data)
 
     class dialog_interface:
         def __init__(self):
@@ -255,3 +260,58 @@ class ProgressBox(tk.Toplevel):
             self.lock.acquire()
             self.status2 = text
             self.lock.release()
+
+####################################################################################################
+# Example
+####################################################################################################
+if __name__ == '__main__':
+    import time
+    
+    # This is a list of data that I have to do some processing on
+    my_list_of_data = [
+        "foo",
+        "bar",
+        "foobar",
+        "barfoo"
+    ]
+    
+    # Create a function that will do the work.
+    # dlg_if is required. Other args are for whatever is needed to pass in.
+    def my_job_function(dlg_if, my_foobar_list):
+        n_items = len(my_foobar_list)
+        n_items_done = 0
+        processed_foobar = []
+        
+        for foobar in my_foobar_list:
+            dlg_if.set_status1("Processing FooBars: %d of %d" % (n_items_done+1, n_items))
+            dlg_if.set_status2("%s" % foobar)
+            dlg_if.set_progress(100*n_items_done/n_items)
+            
+            if(dlg_if.stop_requested()):
+                return(None)
+            
+            # Do some really hard work
+            processed_foobar.append(foobar.upper())
+            time.sleep(1)
+            
+            n_items_done += 1
+        
+        return(processed_foobar)
+    
+    # Package args that will be passed to the job function
+    my_job_args = {
+        'my_foobar_list': my_list_of_data
+    }
+    
+    # Run the job through the ProgressBox
+    job = ProgressBox(
+        job_func = my_job_function,
+        job_data = my_job_args,
+        parent = None,
+        title = "Doing some work..."
+    )
+    
+    if(job.job_retval == None):
+        print("Exited early")
+    else:
+        print(job.job_retval)

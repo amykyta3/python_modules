@@ -27,7 +27,7 @@ import tkinter as tk
 from tkinter import ttk
 
 ####################################################################################################
-class Dialog(tk.Toplevel):
+class Dialog(object):
     """
     Generic dialog parent class
     """
@@ -36,34 +36,33 @@ class Dialog(tk.Toplevel):
         
         if(parent):
             # Has a defined parent.
-            self.parent = parent
-            self.foster_parent = None
-            tk.Toplevel.__init__(self, self.parent)
-            self.transient(self.parent)
+            self.tkWindow = tk.Toplevel(parent)
+            self.tkWindow.transient(parent)
+            self.tkWindow.parent = parent
+            self.tkWindow.foster_parent = None
         else:
             # Headless Dialog. Create foster parent
-            self.foster_parent = tk.Tk()
-            self.parent = None
-            self.foster_parent.withdraw()
-            tk.Toplevel.__init__(self, self.foster_parent)
+            foster_parent = tk.Tk()
+            foster_parent.withdraw()
+            self.tkWindow = tk.Toplevel(foster_parent)
+            self.tkWindow.parent = None
+            self.tkWindow.foster_parent = foster_parent
             
-        self.result = None
-        
         #--------------------------------------------------------
         # Create Widgets
         
         if title:
-            self.title(title)
+            self.tkWindow.title(title)
         
         body = ttk.Frame(
-            self,
+            self.tkWindow,
             padding = 5
         )
         self.create_body(body)
         body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         
         buttonbox = ttk.Frame(
-            self,
+            self.tkWindow,
             padding = 5
         )
         self.create_buttonbox(buttonbox)
@@ -72,20 +71,20 @@ class Dialog(tk.Toplevel):
         #--------------------------------------------------------
         
         # window is not allowed to be any smaller than default
-        self.update_idletasks() #Give Tk a chance to update widgets and figure out the window size
-        self.minsize(self.winfo_width(), self.winfo_height())
+        self.tkWindow.update_idletasks() #Give Tk a chance to update widgets and figure out the window size
+        self.tkWindow.minsize(self.tkWindow.winfo_width(), self.tkWindow.winfo_height())
         
-        if(self.parent):
+        if(self.tkWindow.parent):
             # Place dialog on top of parent window
-            self.grab_set()
-            self.geometry("+%d+%d" % (self.parent.winfo_rootx()+50,
-                                      self.parent.winfo_rooty()+50))
+            self.tkWindow.grab_set()
+            self.tkWindow.geometry("+%d+%d" % (self.tkWindow.parent.winfo_rootx()+50,
+                                               self.tkWindow.parent.winfo_rooty()+50))
         
         # User initialize routines
         self.dlg_initialize()
         
         # block until the window exits
-        self.wait_window(self)
+        self.tkWindow.wait_window(self.tkWindow)
     
     #---------------------------------------------------------------
     # Construction Hooks
@@ -93,7 +92,6 @@ class Dialog(tk.Toplevel):
     def create_body(self, master_fr):
         """
         Create dialog body.
-        Return widget that should have initial focus.
         This method should be overridden.
         """
         pass
@@ -118,7 +116,7 @@ class Dialog(tk.Toplevel):
         ).pack(side=tk.RIGHT)
         
         # Do Cancel if closed
-        self.protocol("WM_DELETE_WINDOW", self.dlg_pbCancel)
+        self.tkWindow.protocol("WM_DELETE_WINDOW", self.dlg_pbCancel)
         
     #---------------------------------------------------------------
     # Standard button actions
@@ -130,43 +128,57 @@ class Dialog(tk.Toplevel):
         self.dlg_apply()
         self.result = True
         
-        self.withdraw()
-        self.update_idletasks()
+        self.tkWindow.withdraw()
+        self.tkWindow.update_idletasks()
         
-        if(self.parent):
+        if(self.tkWindow.parent):
             # put focus back to the parent window
-            self.parent.focus_set()
+            self.tkWindow.parent.focus_set()
         
-        self.destroy()
+        self.tkWindow.destroy()
         
-        if(self.foster_parent):
-            self.foster_parent.destroy()
+        if(self.tkWindow.foster_parent):
+            self.tkWindow.foster_parent.destroy()
         
     def dlg_pbCancel(self, event=None):
         self.result = False
         
-        self.withdraw()
-        self.update_idletasks()
+        self.tkWindow.withdraw()
+        self.tkWindow.update_idletasks()
         
-        if(self.parent):
+        if(self.tkWindow.parent):
             # put focus back to the parent window
-            self.parent.focus_set()
+            self.tkWindow.parent.focus_set()
         
-        self.destroy()
+        self.tkWindow.destroy()
         
-        if(self.foster_parent):
-            self.foster_parent.destroy()
+        if(self.tkWindow.foster_parent):
+            self.tkWindow.foster_parent.destroy()
     
     #---------------------------------------------------------------
     # Standard Action hooks
     #---------------------------------------------------------------
     def dlg_initialize(self):
+        """
+        This is called once all objects in the dialog have been created.
+        Override this to initialize dialog widgets.
+        """
         pass # override
         
     def dlg_validate(self):
+        """
+        This is called prior to exiting the dialog to validate the dialog contents prior to applying
+        them.
+        If False is returned, the dialog does not exit.
+        If True is returned, dlg_apply() is called, and the dialog exits.
+        """
         return(True) # override
     
     def dlg_apply(self):
+        """
+        This is called prior to exit when accepting the contents of the dialog.
+        Contents have already been validated, and can be stored in local variables
+        """
         pass # override
 
 
@@ -178,22 +190,26 @@ if __name__ == '__main__':
     
     class ExampleDialog(Dialog):
         def __init__(self, my_text):
+            # Set up user-variables here
             self.my_text = my_text
             
+            # Start the dialog. This blocks until done.
             Dialog.__init__(self, parent = None, title = "Example")
         
         def create_body(self, master_fr):
+            # Construct the contents of the dialog
             self.txt_textbox = ttk.Entry(
                 master_fr
             )
             self.txt_textbox.pack()
             
         def dlg_initialize(self):
-            
+            # Initialize dialog objects from any user-variables set during __init__()
             self.txt_textbox.delete(0, tk.END)
             self.txt_textbox.insert(tk.END, self.my_text)
             
         def dlg_validate(self):
+            # Check if user input is valid
             if(len(self.txt_textbox.get()) == 0):
                 messagebox.showerror(
                     title = "Error!",
@@ -204,19 +220,13 @@ if __name__ == '__main__':
             return(True)
             
         def dlg_apply(self):
+            # Save contents of dialog into variables
             self.my_text = self.txt_textbox.get()
     
     
-    
-    
     dlg = ExampleDialog("test text")
-    
     if(dlg.result):
-        print(dlg.my_text)
-        
+        print("User pressed OK. Textbox contents: %s " % dlg.my_text)
     else:
-        print("Cancelled")
-        
-    import pprint
-    pprint.pprint(vars(dlg))
+        print("User pressed cancel or closed window.")
     
