@@ -54,19 +54,23 @@ class Dialog(object):
         if title:
             self.tkWindow.title(title)
         
-        body = ttk.Frame(
+        fr_body = ttk.Frame(
             self.tkWindow,
             padding = 5
         )
-        self.create_body(body)
-        body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.create_body(fr_body)
+        fr_body.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         
-        buttonbox = ttk.Frame(
+        ttk.Separator(
+            self.tkWindow
+        ).pack(side=tk.TOP, fill=tk.X)
+        
+        fr_buttonbox = ttk.Frame(
             self.tkWindow,
             padding = 5
         )
-        self.create_buttonbox(buttonbox)
-        buttonbox.pack(side=tk.BOTTOM, fill=tk.X)
+        self.create_buttonbox(fr_buttonbox)
+        fr_buttonbox.pack(side=tk.BOTTOM, fill=tk.X)
         
         #--------------------------------------------------------
         
