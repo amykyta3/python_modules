@@ -25,7 +25,7 @@
 
 import tkinter as tk
 from tkinter import ttk
-from _Dialog import Dialog
+from ._Dialog import Dialog
 
 ####################################################################################################
 class ListEdit(Dialog):
@@ -155,7 +155,9 @@ class ListEdit(Dialog):
         idx = self.lb_items.curselection()
         if(len(idx)):
             idx = int(idx[0])
-            self.deallocate_item(self.item_list[idx])
+            if(self.deleting_item(self.item_list[idx]) == False):
+                return
+            
             del self.item_list[idx]
             self.lb_items.delete(idx)
             
@@ -202,12 +204,13 @@ class ListEdit(Dialog):
         """
         return("name")
     
-    def deallocate_item(self, I):
+    def deleting_item(self, I):
         """
         Item I is about to be removed from the list.
         Do cleanup actions if necessary
+        If item cannot be removed, return False to cancel
         """
-        pass
+        return(True)
         
     def new_item(self):
         """
