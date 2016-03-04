@@ -112,8 +112,8 @@ class ListEdit(Dialog):
         ).pack(side = tk.BOTTOM)
     
     def dlg_initialize(self):
-        for I in self.item_list:
-            self.lb_items.insert(tk.END, self.get_item_label(I))
+        for idx, I in enumerate(self.item_list):
+            self.lb_items.insert(tk.END, self.get_item_label(I, idx))
         
     def on_pb_Up(self):
         idx = self.lb_items.curselection()
@@ -128,7 +128,7 @@ class ListEdit(Dialog):
         self.lb_items.delete(idx)
         
         self.item_list.insert(idx-1, I)
-        self.lb_items.insert(idx-1, self.get_item_label(I))
+        self.lb_items.insert(idx-1, self.get_item_label(I, idx-1))
         self.lb_items.selection_clear(0,tk.END)
         self.lb_items.selection_set(idx-1)
         self.lb_items.see(idx-1)
@@ -146,7 +146,7 @@ class ListEdit(Dialog):
         self.lb_items.delete(idx)
         
         self.item_list.insert(idx+1, I)
-        self.lb_items.insert(idx+1, self.get_item_label(I))
+        self.lb_items.insert(idx+1, self.get_item_label(I, idx+1))
         self.lb_items.selection_clear(0,tk.END)
         self.lb_items.selection_set(idx+1)
         self.lb_items.see(idx+1)
@@ -173,8 +173,9 @@ class ListEdit(Dialog):
         if(I == None):
             return
         
+        idx = len(self.item_list)
         self.item_list.append(I)
-        self.lb_items.insert(tk.END, self.get_item_label(I))
+        self.lb_items.insert(tk.END, self.get_item_label(I, idx))
         self.lb_items.selection_clear(0,tk.END)
         self.lb_items.selection_set(len(self.item_list)-1)
         self.lb_items.see(len(self.item_list)-1)
@@ -192,13 +193,13 @@ class ListEdit(Dialog):
         
         # update label
         self.lb_items.delete(idx)
-        self.lb_items.insert(idx, self.get_item_label(I))
+        self.lb_items.insert(idx, self.get_item_label(I, idx))
         self.lb_items.selection_set(idx)
         
     #---------------------------------------------------------------
     # User Functions
     #---------------------------------------------------------------
-    def get_item_label(self, I):
+    def get_item_label(self, I, idx):
         """
         Given an item, return an identifier string to use in the list
         """
