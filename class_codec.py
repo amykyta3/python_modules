@@ -57,6 +57,26 @@ def do_encode(obj, tmpl, parent_key, _encoded_objs, depth = 1):
         
         result = tuple(tmplist)
         
+    elif(type(tmpl) == dict):
+        # Expecting a dictionary
+        if(type(obj) != dict):
+            raise TypeError("'%s', depth=%d: Expected 'dict'. Got '%s'" 
+                % (parent_key, depth, type(obj).__name__))
+        
+        # Template dict must have exactly one key:value pair
+        if(len(tmpl) != 1):
+            raise ValueError("'%s', depth=%d: Templates for dicts must have exactly one key:value pair"
+                % (parent_key, depth))
+        
+        tmpl_k = list(tmpl.keys())[0]
+        tmpl_v = list(tmpl.values())[0]
+        
+        result = {}
+        for obj_k, obj_v in obj.items():
+            k = do_encode(obj_k, tmpl_k, parent_key, _encoded_objs, depth+1)
+            v = do_encode(obj_v, tmpl_v, parent_key, _encoded_objs, depth+1)
+            result[k] = v
+        
     elif(type(tmpl) == type):
         # Got to maximum depth.
         
@@ -122,6 +142,26 @@ def do_decode(obj, tmpl, parent_key, _decoded_objs, depth = 1):
         
         result = tuple(tmplist)
         
+    elif(type(tmpl) == dict):
+        # Expecting a dictionary
+        if(type(obj) != dict):
+            raise TypeError("'%s', depth=%d: Expected 'dict'. Got '%s'" 
+                % (parent_key, depth, type(obj).__name__))
+        
+        # Template dict must have exactly one key:value pair
+        if(len(tmpl) != 1):
+            raise ValueError("'%s', depth=%d: Templates for dicts must have exactly one key:value pair"
+                % (parent_key, depth))
+        
+        tmpl_k = list(tmpl.keys())[0]
+        tmpl_v = list(tmpl.values())[0]
+        
+        result = {}
+        for obj_k, obj_v in obj.items():
+            k = do_decode(obj_k, tmpl_k, parent_key, _decoded_objs, depth+1)
+            v = do_decode(obj_v, tmpl_v, parent_key, _decoded_objs, depth+1)
+            result[k] = v
+    
     elif(type(tmpl) == type):
         # Got to maximum depth.
         
@@ -222,23 +262,33 @@ def do_resolve_ref(tmpl, obj, _decoded_objs):
 class EncodableClass(object):
     
     """
-    Dictionary of class members to encode
-    {key : template}
+    This class enables an object to be encoded and rebuilt to/from a set of primitive datatypes
+    in a controlled manner.
     
-    key: The name of the class member
-    template: Minimal representation of the type of the member's contents
+    The class parameter, "encode_schema" strictly defines the type structure of the class contents
     
-    Aggregate data types in template:
-        List: Describes a list where each item in the list is of the same type
-        Tuple: Describes a tuple of fixed size, containing the matching type items
+    encode_schema is a dictionary of class members to encode, and their template:
+        {key : template}
     
-    Examples:
-        A String:
-            {"my_string" : str}
-        List of integers:
-            {"my_list" : [int]}
-        List of mixed tuples:
-            {"my_complex_list" : [(int, str, my_class)]}
+        key: The name of the class member
+        template: Minimal representation of the type of the member's contents
+        
+        Allowed aggregate data types in template:
+            List: Describes a list where each item in the list is of the same type
+            Tuple: Describes a tuple of fixed size, containing the matching type items
+            Dict: Describes a dictionary where the keys all have the same type, as well as the values
+                FYI: dictionary keys are always encoded as strings with JSON, so other datatypes will
+                     not work here.
+        
+        Examples:
+            A String:
+                {"my_string" : str}
+            List of integers:
+                {"my_list" : [int]}
+            List of mixed tuples:
+                {"my_complex_list" : [(int, str, MyClass)]}
+            Dictionary where the key is a string, and value is a subclass:
+                {"my_dict" : {str, MyClass}}
     """
     encode_schema = {}
     
