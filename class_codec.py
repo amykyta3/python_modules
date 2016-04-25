@@ -15,6 +15,18 @@ def get_classid_str(cls):
     return("%s.%s" % (cls.__module__, cls.__name__))
 
 #-------------------------------------------------------------------------------
+def is_in_list(obj, obj_list):
+    """
+    Check if obj is in obj_list explicitly by id
+    Using (obj in obj_list) has false positives if the object overrides its __eq__ operator
+    """
+    for o in obj_list:
+        if(id(o) == id(obj)):
+            return(True)
+    else:
+        return(False)
+
+#-------------------------------------------------------------------------------
 class Ref:
     """
     Temporary placeholder for unresolved references
@@ -306,7 +318,7 @@ class EncodableClass(object):
             _encoded_objs = []
         
         D = {}
-        if(self in _encoded_objs):
+        if(is_in_list(self, _encoded_objs)):
             # This object has already been encoded elsewhere.
             # Instead, just store a reference to the other one
             D['<classtype>'] = '<ref>'
