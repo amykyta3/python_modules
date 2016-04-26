@@ -415,3 +415,67 @@ class EncodableClass(object):
             
         schema.update(cls.encode_schema)
         return(schema)
+
+################################################################################
+# Example
+################################################################################
+if __name__ == '__main__':
+    import json
+    import filecmp
+
+    class Bar(EncodableClass):
+        
+        encode_schema = {
+            "x": int,
+            "D" : {
+                str: str
+            }
+        }
+        
+        def __init__(self, x):
+            self.x = x
+            self.D = {}
+            
+    class Foo(EncodableClass):
+        
+        encode_schema = {
+            "a": int,
+            "items": [EncodableClass]
+        }
+        
+        def __init__(self, a):
+            self.a = a
+            self.items = []
+    
+    # Create a data structure
+    foo = Foo(1)
+    foo.items.append(Bar(100))
+    foo.items.append(Bar(1234))
+    b = Bar(22)
+    foo.items.append(b)
+    foo.items.append(b)
+    b.D["hello"] = "world"
+    b.D["bye"] = "asdf"
+    foo2 = Foo(999)
+    foo2.items.append(Bar(77))
+    foo2.items.append(Bar(66))
+    foo2.items.append(b)
+    foo.items.append(foo2)
+    foo.items.append(foo)
+    
+    # Convert to dict and save to file as JSON
+    with open("test.json", 'w') as f:
+        json.dump(foo.to_dict(), f, indent=2, sort_keys = True)
+    
+    # Reconstitute from file
+    with open("test.json", 'r') as f:
+        foo_prime = Foo.from_dict(json.load(f))
+    
+    # Convert back to JSON
+    with open("test2.json", 'w') as f:
+        json.dump(foo_prime.to_dict(), f, indent=2, sort_keys = True)
+        
+    if(filecmp.cmp("test.json", "test2.json")):
+        print("OK!")
+    else:
+        print("Failed")
