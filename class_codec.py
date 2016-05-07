@@ -92,7 +92,17 @@ def do_encode(obj, tmpl, parent_key, _encoded_objs, depth = 1):
     elif(type(tmpl) == type):
         # Got to maximum depth.
         
-        if(issubclass(type(obj), EncodableClass)):
+        if(issubclass(tmpl, ForeignObjectCodec)):
+            # Foreign object. Use template codec to translate object.
+            
+            # make sure the object is compatible with what the codec wants
+            if(not tmpl.is_compatible(obj)):
+                raise TypeError("'%s', depth=%d: Expected '%s'. Got '%s'" 
+                    % (parent_key, depth, tmpl.obj_type.__name__, type(obj).__name__))
+            
+            result = tmpl.encode(obj)
+            
+        elif(issubclass(tmpl, EncodableClass)):
             # Got an EncodableClass
             
             # make sure it is what the template expects
@@ -177,7 +187,11 @@ def do_decode(obj, tmpl, parent_key, _decoded_objs, depth = 1):
     elif(type(tmpl) == type):
         # Got to maximum depth.
         
-        if(issubclass(tmpl, EncodableClass)):
+        if(issubclass(tmpl, ForeignObjectCodec)):
+            # Foreign object. Use template codec to translate object.
+            result = tmpl.decode(obj)
+            
+        elif(issubclass(tmpl, EncodableClass)):
             # Expecting an EncodableClass
             
             # Check if current obj looks like an EncodableClass
@@ -271,7 +285,40 @@ def do_resolve_ref(tmpl, obj, _decoded_objs):
     return(obj)
     
 #-------------------------------------------------------------------------------
-class EncodableClass(object):
+class ForeignObjectCodec:
+    """
+    Template for an object that is not an EncodableClass, nor is it a primitive datatype
+    This is used to define encode/decode methods for any other types.
+    """
+    obj_type = type
+    
+    @classmethod
+    def is_compatible(cls, obj):
+        """
+        Checks if obj is compatible with cls.obj_type.
+        Override if comparison is more complex than just type-matching.
+        """
+        if(type(obj) != cls.obj_type):
+            return(False)
+        return(True)
+            
+    @classmethod
+    def encode(cls, obj):
+        """
+        Convert the object obj of type cls.obj_type to a primitive datatype
+        that can be used later to re-create the object.
+        """
+        return("NULL")
+    
+    @classmethod
+    def decode(cls, d):
+        """
+        Create an object of type cls.obj_type from d
+        """
+        return(None)
+
+#-------------------------------------------------------------------------------
+class EncodableClass:
     
     """
     This class enables an object to be encoded and rebuilt to/from a set of primitive datatypes
@@ -422,7 +469,19 @@ class EncodableClass(object):
 if __name__ == '__main__':
     import json
     import filecmp
-
+    import datetime
+    
+    class DatetimeCodec(ForeignObjectCodec):
+        obj_type = datetime.datetime
+        
+        @classmethod
+        def encode(cls, obj):
+            return(obj.timestamp()*1000000)
+        
+        @classmethod
+        def decode(cls, d):
+            return(datetime.datetime.fromtimestamp(d/1000000))
+    
     class Bar(EncodableClass):
         
         encode_schema = {
@@ -440,12 +499,14 @@ if __name__ == '__main__':
         
         encode_schema = {
             "a": int,
-            "items": [EncodableClass]
+            "items": [EncodableClass],
+            "timestamp": DatetimeCodec
         }
         
         def __init__(self, a):
             self.a = a
             self.items = []
+            self.timestamp = datetime.datetime.today()
     
     # Create a data structure
     foo = Foo(1)
