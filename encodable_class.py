@@ -127,12 +127,16 @@ def do_encode(obj, tmpl, parent_key, _encoded_objs, depth = 1):
         elif(issubclass(tmpl, EncodableClass)):
             # Got an EncodableClass
             
-            # make sure it is what the template expects
-            if(not issubclass(type(obj), tmpl)):
-                raise TypeError("'%s', depth=%d: Expected '%s'. Got '%s'" 
-                    % (parent_key, depth, tmpl.__name__, type(obj).__name__))
-            
-            result = obj.to_dict(_encoded_objs)
+            if(obj == None):
+              # None is OK too.
+              result = obj
+            else:
+              # make sure it is what the template expects
+              if(not issubclass(type(obj), tmpl)):
+                  raise TypeError("'%s', depth=%d: Expected '%s'. Got '%s'" 
+                      % (parent_key, depth, tmpl.__name__, type(obj).__name__))
+              
+              result = obj.to_dict(_encoded_objs)
         
         else:
             # Everything else
@@ -216,33 +220,37 @@ def do_decode(obj, tmpl, parent_key, _decoded_objs, depth = 1):
         elif(issubclass(tmpl, EncodableClass)):
             # Expecting an EncodableClass
             
-            # Check if current obj looks like an EncodableClass
-            if((type(obj) != dict) or ('<classtype>' not in obj)):
-                raise TypeError("'%s', depth=%d: Dictionary incompatible with '%s'"
-                    % (parent_key, depth, tmpl.__name__))
-            
-            if('<ref_id>' not in obj):
-                raise ValueError("'%s', depth=%d: Missing <ref_id>" % (parent_key, depth))
-            
-            if(obj['<classtype>'] == '<ref>'):
-                # This is a reference, not an actual class definition
-                # Populate a Ref object for now. It will be resolved later with the actual
-                result = Ref(obj['<ref_id>'])
-                
+            if(obj == None):
+              # None is OK too.
+              result = obj
             else:
-                # Not a reference. This is an actual class definition
-                
-                # Figure out what specific subtype of tmpl should be created.
-                subclasses = [tmpl]
-                subclasses.extend(get_all_subclasses(tmpl))
-                
-                m = list(filter(lambda cls: (get_classid_str(cls) == obj['<classtype>']), subclasses))
-                if(len(m) == 0):
-                    raise TypeError("'%s', depth=%d: Type '%s' is incompatible with '%s'"
-                        % (parent_key, depth, obj['<classtype>'], get_classid_str(tmpl)))
-                
-                cls = m[0]
-                result = cls.from_dict(obj, _decoded_objs)
+              # Check if current obj looks like an EncodableClass
+              if((type(obj) != dict) or ('<classtype>' not in obj)):
+                  raise TypeError("'%s', depth=%d: Dictionary incompatible with '%s'"
+                      % (parent_key, depth, tmpl.__name__))
+              
+              if('<ref_id>' not in obj):
+                  raise ValueError("'%s', depth=%d: Missing <ref_id>" % (parent_key, depth))
+              
+              if(obj['<classtype>'] == '<ref>'):
+                  # This is a reference, not an actual class definition
+                  # Populate a Ref object for now. It will be resolved later with the actual
+                  result = Ref(obj['<ref_id>'])
+                  
+              else:
+                  # Not a reference. This is an actual class definition
+                  
+                  # Figure out what specific subtype of tmpl should be created.
+                  subclasses = [tmpl]
+                  subclasses.extend(get_all_subclasses(tmpl))
+                  
+                  m = list(filter(lambda cls: (get_classid_str(cls) == obj['<classtype>']), subclasses))
+                  if(len(m) == 0):
+                      raise TypeError("'%s', depth=%d: Type '%s' is incompatible with '%s'"
+                          % (parent_key, depth, obj['<classtype>'], get_classid_str(tmpl)))
+                  
+                  cls = m[0]
+                  result = cls.from_dict(obj, _decoded_objs)
         
         else:
             # Everything else
