@@ -24,11 +24,13 @@ class App:
     if(self.options.verbose):
       self.log.setLevel(logging.DEBUG)
       for l in logging.Logger.manager.loggerDict.values():
-        l.setLevel(logging.DEBUG)
+        if(type(l) == logging.Logger):
+          l.setLevel(logging.DEBUG)
     elif(self.options.quiet):
       self.log.setLevel(logging.WARNING)
       for l in logging.Logger.manager.loggerDict.values():
-        l.setLevel(logging.WARNING)
+        if(type(l) == logging.Logger):
+          l.setLevel(logging.WARNING)
         
   #------------------------------------------------------------------------------------------------
   def parse_cmdline(self):
